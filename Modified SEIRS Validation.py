@@ -153,10 +153,15 @@ intval = 1000
 tint = days/intval
 time_list = [i*tint for i in range(intval+1)]
 zhi_list = [0, 30, 90, 360]
+τ_inc = 5.1
+τ_rec = 18.8
+R_0i = 5.2
 
 for i in range(len(zhi_list)):
        σ = 0.0 
-       β = beta(5.2, 1.0/18.8)
+       β = beta(R_0i, 1.0/18.8)
+       γ = gamma(τ_rec)
+       α = alpha(τ_inc)
        Λ = 0 # Birth rate
        μ = 0 # Death rate
        ξ = 0.01
@@ -173,16 +178,12 @@ for i in range(len(zhi_list)):
        I = [Init_inf]
        R = [0]
        D = [0]
-       R_0i = 5.2
-       τ_inc = 5.1
-       τ_rec = 18.8
        for i in tqdm(range(intval)):
               t_start = time_list[i]
               t_end = time_list[i+1]
               Y0 = [S[-1], E[-1], I[-1], R[-1], D[-1]]
               α = alpha(τ_inc)
               γ = gamma(τ_rec)
-              b1 = beta(R_0i, γ)
               answer = solve_ivp(SEIRS, [t_start, t_end], Y0, t_eval=[t_start, t_end], method = 'Radau', args=(σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:])) 
               Sn = answer.y[0][-1]
               En = answer.y[1][-1]
@@ -209,7 +210,7 @@ for i in range(len(zhi_list)):
        fig = plt.figure()
        plt.plot(time_list, I, 'b-', label=r'$\it{Infected}$')
        plt.plot(time_list, D, '-', color='orange', label=r'$\it{Dead}$')
-       plt.legend([r'$\it{Dead}$', r'$\it{Infected}$'], loc="best", fontsize=15)
+       plt.legend([r'$\it{Infected}$', r'$\it{Dead}$'], loc="best", fontsize=15)
        plt.xlim((0,days))
        plt.ylim((0,Imax))
        plt.yticks([roundup(i*(Imax/10), intval) for i in range(11)])
