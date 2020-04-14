@@ -108,7 +108,7 @@ def gamma(τ_rec):
 # t represents the time
 
 def SEIRS(t, y, *args):
-       σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time, Is, Ss, Rs  = args
+       σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time, Is, Ss, Rs, λ, d  = args
        args2 = [τ_ξ, ξ, time, Rs]
        S = y[0]
        E = y[1]
@@ -141,8 +141,8 @@ def SEIRS(t, y, *args):
               dsdt = Λ - μ*S - (β*I*S)/N  #+ R_s(t, *args2)
               drdt = (γ + μ)*I - μ*R
        dedt = (β*I*S)/N - (σ*β*It*St)/N - (μ + α)*E
-       didt = (μ + α)*E - (γ + μ)*I - γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old))*I 
-       dDdt = γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old))*I
+       didt = (μ + α)*E - (γ + μ)*I - (γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old)))*I 
+       dDdt = d*γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old))*I - λ*D
        
        return [dsdt, dedt, didt, drdt, dDdt]
        
@@ -152,9 +152,11 @@ days = 1200
 intval = 1000
 tint = days/intval
 time_list = [i*tint for i in range(intval+1)]
-zhi_list = [0, 30, 90, 360]
+zhi_list = [0, 30, 60, 120, 180, 240, 360]
+# zhi_list = [0]
 τ_inc = 5.1
 τ_rec = 18.8
+τ_lat = 11.2
 R_0i = 5.2
 
 for z in zhi_list:
@@ -166,26 +168,28 @@ for z in zhi_list:
        μ = 0 # Death rate
        ξ = 0.02
        κ = 0.98  
-       κ_old = 0.96
+       κ_old = 0.92
        τ_ξ = z
-       τ_pre = 0
-       τ_post = 0
+       τ_pre = 30
+       τ_post = 13
        τ_σ = τ_σf(τ_pre, τ_post)
        N = 329436928 #51.5 * 10**6   
        N_old = 0.15
+       λ = τ_lat**-1
+       d = 0.034
        S = [N]
-       E = [10*Init_inf]
+       E = [20*Init_inf]
        I = [Init_inf]
        R = [0]
        D = [0]
        
-       argslist = (σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:])
+       argslist = (σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:], λ, d)
 
        for i in tqdm(range(intval)):
               t_start = time_list[i]
               t_end = time_list[i+1]
               Y0 = [S[-1], E[-1], I[-1], R[-1], D[-1]]
-              answer = solve_ivp(SEIRS, [t_start, t_end], Y0, t_eval=[t_start, t_end], method = 'Radau', args=(σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:]), rtol=1E-6, atol=1E-9) 
+              answer = solve_ivp(SEIRS, [t_start, t_end], Y0, t_eval=[t_start, t_end], method = 'Radau', args=(σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:], λ, d), rtol=1E-6, atol=1E-9) 
               Sn = answer.y[0][-1]
               En = answer.y[1][-1]
               In = answer.y[2][-1]
