@@ -14,6 +14,7 @@ and Resusceptibility
 
 https://arxiv.org/abs/2004.01974
 
+
 """
 
 import matplotlib.pyplot as plt 
@@ -52,8 +53,7 @@ def R_s(t, *args):
        if teindex == len(R):
               teindex -= 1
        elif teindex >= len(R):
-              while teindex >= len(R):
-                     teindex -= 1
+              teindex = len(R) - 1
        return ξ*R[teindex]
 
 def R_c(t, τ_ξ, ξ):
@@ -115,6 +115,7 @@ def SEIRS(t, y, *args):
        I = y[2]
        R = y[3]
        D = y[4]
+       Nn = sum([S, E, I, R, D])
        if t >= τ_σ and t >= τ_ξ:
               tindex = min(range(len(time)), key=lambda i: abs(time[i]- t)) - 1  # time.index(tt)
               if tindex == len(Is):
@@ -123,9 +124,9 @@ def SEIRS(t, y, *args):
                      tindex = len(Is) - 1
               It = Is[tindex]
               St = Ss[tindex]
-              dsdt = Λ - μ*S - (β*I*S)/N + (σ*β*It*St)/N + R_s(t, *args2)
+              dsdt = Λ - μ*S - (β*I*S)/Nn + (σ*β*It*St)/Nn + R_s(t, *args2)
               drdt = (γ + μ)*I - μ*R - R_s(t, *args2)
-       if t >= τ_σ and t < τ_ξ:
+       elif t >= τ_σ and t < τ_ξ:
                tindex = min(range(len(time)), key=lambda i: abs(time[i]- t)) - 1 # time.index(tt)
                if tindex == len(Is):
                      tindex -= 1
@@ -133,14 +134,24 @@ def SEIRS(t, y, *args):
                       tindex = len(Is) - 1
                It = Is[tindex]
                St = Ss[tindex]
-               dsdt = Λ - μ*S - (β*I*S)/N + (σ*β*It*St)/N 
+               dsdt = Λ - μ*S - (β*I*S)/Nn + (σ*β*It*St)/Nn
                drdt = (γ + μ)*I - μ*R 
-       elif t < τ_σ:
+       elif t < τ_σ and t >= τ_ξ:
+               tindex = min(range(len(time)), key=lambda i: abs(time[i]- t)) - 1 # time.index(tt)
+               if tindex == len(Is):
+                     tindex -= 1
+               elif tindex >= len(Is):
+                      tindex = len(Is) - 1
+               It = Is[tindex]
+               St = Ss[tindex]
+               dsdt = Λ - μ*S - (β*I*S)/Nn + R_s(t, *args2)
+               drdt = (γ + μ)*I - μ*R - R_s(t, *args2)
+       elif t < τ_σ and t < τ_ξ:
               It = 0
               St = 0
-              dsdt = Λ - μ*S - (β*I*S)/N  #+ R_s(t, *args2)
+              dsdt = Λ - μ*S - (β*I*S)/Nn  
               drdt = (γ + μ)*I - μ*R
-       dedt = (β*I*S)/N - (σ*β*It*St)/N - (μ + α)*E
+       dedt = (β*I*S)/Nn - (σ*β*It*St)/Nn - (μ + α)*E
        didt = (μ + α)*E - (γ + μ)*I - (γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old)))*I 
        dDdt = d*γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old))*I - λ*D
        
@@ -148,7 +159,8 @@ def SEIRS(t, y, *args):
        
 Init_inf = 10
 
-days = 1200
+days = 2500
+dayint = days/10
 intval = 1000
 tint = days/intval
 time_list = [i*tint for i in range(intval+1)]
@@ -166,8 +178,8 @@ for z in zhi_list:
        α = alpha(τ_inc)
        Λ = 0 # Birth rate
        μ = 0 # Death rate
-       ξ = 0.02
-       κ = 0.98  
+       ξ = 0.01
+       κ = 0.966  
        κ_old = 0.92
        τ_ξ = z
        τ_pre = 30
@@ -177,11 +189,11 @@ for z in zhi_list:
        N_old = 0.15
        λ = τ_lat**-1
        d = 0.034
-       S = [N]
-       E = [20*Init_inf]
-       I = [Init_inf]
-       R = [0]
-       D = [0]
+       S = [float(N)]
+       E = [20.0*Init_inf]
+       I = [float(Init_inf)]
+       R = [0.0]
+       D = [0.0]
        
        argslist = (σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:], λ, d)
 
@@ -189,7 +201,7 @@ for z in zhi_list:
               t_start = time_list[i]
               t_end = time_list[i+1]
               Y0 = [S[-1], E[-1], I[-1], R[-1], D[-1]]
-              answer = solve_ivp(SEIRS, [t_start, t_end], Y0, t_eval=[t_start, t_end], method = 'Radau', args=(σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:], λ, d), rtol=1E-6, atol=1E-9) 
+              answer = solve_ivp(SEIRS, [t_start, t_end], Y0, t_eval=[t_start, t_end], method = 'Radau', args=(σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time_list, I[:], S[:], R[:], λ, d), rtol=1E-5, atol=1E-8) 
               Sn = answer.y[0][-1]
               En = answer.y[1][-1]
               In = answer.y[2][-1]
@@ -210,7 +222,7 @@ for z in zhi_list:
        plt.xlim((0,days))
        plt.ylim((0,Imax))
        plt.yticks([roundup(i*(Imax/10), intval) for i in range(11)])
-       plt.xticks([int(i*100) for i in range(13)])
+       plt.xticks([int(i*dayint) for i in range(11)])
        plt.gca().get_yaxis().get_major_formatter().set_scientific(False)
        plt.gca().set_yticklabels([r'{:,}'.format(int(x)) for x in plt.gca().get_yticks()])
        plt.xlabel(r'$\bf{Time \ [Days]}$', fontsize=15)
@@ -243,7 +255,7 @@ for z in zhi_list:
        plt.xlim((0,days))
        plt.ylim((0,N))
        plt.yticks([roundup(i*(N/10.0), intval) for i in range(11)])
-       plt.xticks([int(i*100) for i in range(13)])
+       plt.xticks([int(i*dayint) for i in range(11)])
        plt.gca().get_yaxis().get_major_formatter().set_scientific(False)
        plt.gca().set_yticklabels([r'{:,}'.format(int(x)) for x in plt.gca().get_yticks()])
        plt.xlabel(r'$\bf{Time \ [Days]}$', fontsize=15)
@@ -264,6 +276,7 @@ for z in zhi_list:
        plt.xlim((0,days))
        plt.ylim((0,100))
        plt.yticks([i*10 for i in range(11)])
+       plt.xticks([int(i*dayint) for i in range(11)])
        plt.gca().set_yticklabels([f'{int(y)}%' for y in plt.gca().get_yticks()])
        plt.gca().set_xticklabels([f'{int(x)}' for x in plt.gca().get_xticks()])
        plt.xlabel(r'$\bf{Time \ [Days]}$', fontsize=15)
@@ -274,17 +287,18 @@ for z in zhi_list:
        fig.savefig(r"{}\SEIRS Percent.svg".format(path_fol), bbox_inches='tight')
               
        fig = plt.figure()
-       plt.plot(time_list, D, 'b-', label=r'$\it{Deaths}$')
+       str1 = 'τ_{}{}{}'.format('{', 'ξ', '}')
+       plt.plot(time_list, D, 'b-', label=r'${}$ = {}'.format(str1, τ_ξ))
        # plt.axvline(x=int(time_list[Ip1]), color='k', linestyle='--')
-       plt.legend([r'$\it{Deaths}$',  r'$\it{}$'.format("{}{}{}".format('{',"Peak \ = {}{}{} \ Days".format('{',r'\ {}'.format(peakn),'}'),'}'))], loc="best", fontsize=15)
+       plt.legend([r'${}$ = {}'.format(str1, τ_ξ)], loc="best", fontsize=15)
        plt.gca().get_yaxis().get_major_formatter().set_scientific(False)
        plt.gca().set_yticklabels([r'{:,}'.format(int(x)) for x in plt.gca().get_yticks()])
        plt.xlabel(r'$\bf{Time \ [Days]}$', fontsize=15)
-       plt.ylabel(r'$\bf{Number \ of \ people}$', fontsize=15)
+       plt.ylabel(r'$\bf{Number \ of \ Deaths}$', fontsize=15)
        plt.title(r'$\bf{SEIRS \ Method  \ for \ Spread \ of \ Disease}$', fontsize=18)
        plt.grid()
-       fig.savefig(r"{}\SEIRS Deaths.pdf".format(path_fol), bbox_inches='tight')
-       fig.savefig(r"{}\SEIRS Deaths.svg".format(path_fol), bbox_inches='tight')
+       fig.savefig(r"{}\SEIRS-{} Deaths.pdf".format(path_fol, τ_ξ), bbox_inches='tight')
+       fig.savefig(r"{}\SEIRS-{} Deaths.svg".format(path_fol, τ_ξ), bbox_inches='tight')
        plt.show()
        
        S.clear()
@@ -297,8 +311,6 @@ for z in zhi_list:
        Ip.clear()
        Rp.clear()
        Dp.clear()
-
-     
        
 end = time.time() #Time when it finishes, this is real time
 
