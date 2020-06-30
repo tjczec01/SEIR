@@ -14,6 +14,8 @@ and Resusceptibility
 
 https://arxiv.org/abs/2004.01974
 
+https://doi.org/10.1016/j.physd.2020.132599
+
 
 """
 
@@ -109,14 +111,13 @@ def gamma(τ_rec):
 # t represents the time
 
 def SEIRS(t, y, *args):
-       σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time, Is, Ss, Rs, λ, d  = args
+       σ, β, γ, α, Λ, μ, ξ, κ, κ_old, τ_ξ, τ_σ, N, N_old, time, Is, Ss, Rs  = args
        args2 = [τ_ξ, ξ, time, Rs]
        S = y[0]
        E = y[1]
        I = y[2]
        R = y[3]
        D = y[4]
-       Nn = sum([S, E, I, R, D])
        if t >= τ_σ and t >= τ_ξ:
               tindex = min(range(len(time)), key=lambda i: abs(time[i]- t)) - 1  # time.index(tt)
               if tindex == len(Is):
@@ -125,9 +126,9 @@ def SEIRS(t, y, *args):
                      tindex = len(Is) - 1
               It = Is[tindex]
               St = Ss[tindex]
-              dsdt = Λ - μ*S - (β*I*S)/Nn + (σ*β*It*St)/Nn + R_s(t, *args2)
+              dsdt = Λ - μ*S - (β*I*S)/N + (σ*β*It*St)/N + R_s(t, *args2)
               drdt = (γ + μ)*I - μ*R - R_s(t, *args2)
-       elif t >= τ_σ and t < τ_ξ:
+       if t >= τ_σ and t < τ_ξ:
                tindex = min(range(len(time)), key=lambda i: abs(time[i]- t)) - 1 # time.index(tt)
                if tindex == len(Is):
                      tindex -= 1
@@ -135,26 +136,16 @@ def SEIRS(t, y, *args):
                       tindex = len(Is) - 1
                It = Is[tindex]
                St = Ss[tindex]
-               dsdt = Λ - μ*S - (β*I*S)/Nn + (σ*β*It*St)/Nn
+               dsdt = Λ - μ*S - (β*I*S)/N + (σ*β*It*St)/N 
                drdt = (γ + μ)*I - μ*R 
-       elif t < τ_σ and t >= τ_ξ:
-               tindex = min(range(len(time)), key=lambda i: abs(time[i]- t)) - 1 # time.index(tt)
-               if tindex == len(Is):
-                     tindex -= 1
-               elif tindex >= len(Is):
-                      tindex = len(Is) - 1
-               It = Is[tindex]
-               St = Ss[tindex]
-               dsdt = Λ - μ*S - (β*I*S)/Nn + R_s(t, *args2)
-               drdt = (γ + μ)*I - μ*R - R_s(t, *args2)
-       elif t < τ_σ and t < τ_ξ:
+       elif t < τ_σ:
               It = 0
               St = 0
-              dsdt = Λ - μ*S - (β*I*S)/Nn  
+              dsdt = Λ - μ*S - (β*I*S)/N  #+ R_s(t, *args2)
               drdt = (γ + μ)*I - μ*R
-       dedt = (β*I*S)/Nn - (σ*β*It*St)/Nn - (μ + α)*E
-       didt = (μ + α)*E - (γ + μ)*I - (γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old)))*I 
-       dDdt = d*γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old))*I - λ*D
+       dedt = (β*I*S)/N - (σ*β*It*St)/N - (μ + α)*E
+       didt = (μ + α)*E - (γ + μ)*I - γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old))*I 
+       dDdt = γ*((1 - κ_old)*N_old + (1 - κ)*(1 - N_old))*I
        
        return [dsdt, dedt, didt, drdt, dDdt]
        
